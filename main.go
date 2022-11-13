@@ -23,7 +23,7 @@ type repository struct {
 
 func main() {
 	app := &cli.App{
-		Name:  "gh-star",
+		Name:  "gh-starred",
 		Usage: "make operations about your starred repositories",
 		Commands: []*cli.Command{
 			{
