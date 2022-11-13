@@ -9,8 +9,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/cli/go-gh"
+	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,10 +30,10 @@ func main() {
 				Name:  "repos",
 				Usage: "list your starred repositories",
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						// TODO: accept multiple topics
-						Name:  "topic",
-						Usage: "topic to filter repositories",
+					&cli.StringSliceFlag{
+						Name:    "topics",
+						Usage:   "topics to filter repositories",
+						Aliases: []string{"t"},
 					},
 				},
 				Action: repos,
@@ -63,17 +63,22 @@ func repos(ctx *cli.Context) error {
 		return err
 	}
 
-	topic := ctx.String("topic")
+	topics := ctx.StringSlice("topics")
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "URL"})
 	for _, repo := range starredRepos {
 		shouldPrint := false
-		if topic == "" {
+		if len(topics) == 0 {
 			shouldPrint = true
 		} else {
-			for _, t := range repo.Topics {
-				if t == topic {
-					shouldPrint = true
+			for _, t1 := range repo.Topics {
+				for _, t2 := range topics {
+					if t1 == t2 {
+						shouldPrint = true
+						break
+					}
+				}
+				if shouldPrint {
 					break
 				}
 			}
