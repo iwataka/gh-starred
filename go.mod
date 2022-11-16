@@ -3,6 +3,7 @@ module github.com/iwataka/gh-starred
 go 1.19
 
 require (
+	github.com/c-bata/go-prompt v0.2.6
 	github.com/cli/go-gh v0.1.2
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/urfave/cli/v2 v2.23.5
@@ -15,9 +16,12 @@ require (
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/muesli/termenv v0.12.0 // indirect
+	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect

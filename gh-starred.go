@@ -7,11 +7,17 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
+	"github.com/c-bata/go-prompt"
 	"github.com/cli/go-gh"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	COMMAND_NAME = "gh-starred"
 )
 
 type repository struct {
@@ -23,7 +29,7 @@ type repository struct {
 
 func main() {
 	app := &cli.App{
-		Name:  "gh-starred",
+		Name:  COMMAND_NAME,
 		Usage: "make operations about your starred repositories",
 		Commands: []*cli.Command{
 			{
@@ -42,6 +48,11 @@ func main() {
 				Name:   "topics",
 				Usage:  "list topics in your starred repositories",
 				Action: topics,
+			},
+			{
+				Name:   "shell",
+				Usage:  "activate interactive shell mode",
+				Action: shell,
 			},
 		},
 		Flags: []cli.Flag{
@@ -110,6 +121,32 @@ func topics(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func shell(ctx *cli.Context) error {
+	executer := AppExecuter{ctx.App}
+	completer := AppCompleter{ctx.App}
+	p := prompt.New(executer.execute, completer.complete, prompt.OptionPrefix(fmt.Sprintf("%s> ", COMMAND_NAME)))
+	p.Run()
+	return nil
+}
+
+type AppExecuter struct {
+	app *cli.App
+}
+
+func (e *AppExecuter) execute(in string) {
+	args := []string{COMMAND_NAME}
+	args = append(args, strings.Fields(in)...)
+	e.app.Run(args) //nolint:errcheck
+}
+
+type AppCompleter struct {
+	app *cli.App
+}
+
+func (c *AppCompleter) complete(in prompt.Document) []prompt.Suggest {
+	return []prompt.Suggest{}
 }
 
 func getRepos(batchSize int) ([]repository, error) {
