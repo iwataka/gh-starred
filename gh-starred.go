@@ -20,6 +20,10 @@ const (
 	COMMAND_NAME = "gh-starred"
 )
 
+var (
+	cachedRepositories []repository
+)
+
 type repository struct {
 	Name     string   `json:"name"`
 	FullName string   `json:"full_name"`
@@ -69,7 +73,7 @@ func main() {
 }
 
 func repos(ctx *cli.Context) error {
-	starredRepos, err := getRepos(ctx.Int("batch-size"))
+	starredRepos, err := getRepos(ctx.Int("batch-size"), true)
 	if err != nil {
 		return err
 	}
@@ -104,7 +108,7 @@ func repos(ctx *cli.Context) error {
 }
 
 func topics(ctx *cli.Context) error {
-	starredRepos, err := getRepos(ctx.Int("batch-size"))
+	starredRepos, err := getRepos(ctx.Int("batch-size"), true)
 	if err != nil {
 		return err
 	}
@@ -149,11 +153,13 @@ func (c *AppCompleter) complete(in prompt.Document) []prompt.Suggest {
 	return []prompt.Suggest{}
 }
 
-func getRepos(batchSize int) ([]repository, error) {
+func getRepos(batchSize int, useCache bool) ([]repository, error) {
+	if cachedRepositories != nil && useCache {
+		return cachedRepositories, nil
+	}
+
 	perPage := 100
-
 	starredRepos := []repository{}
-
 	for i := 1; ; i += batchSize {
 		var repos []repository
 		var err error
@@ -170,6 +176,7 @@ func getRepos(batchSize int) ([]repository, error) {
 			break
 		}
 	}
+	cachedRepositories = starredRepos
 
 	return starredRepos, nil
 }
