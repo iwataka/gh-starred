@@ -1,5 +1,3 @@
-// TODO: interactive shell with input completion
-
 package main
 
 import (
@@ -7,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -108,9 +107,22 @@ func repos(ctx *cli.Context) error {
 }
 
 func topics(ctx *cli.Context) error {
-	starredRepos, err := getRepos(ctx.Int("batch-size"), true)
+	topics, err := getTopics(ctx.Int("batch-size"))
 	if err != nil {
 		return err
+	}
+
+	for _, topic := range topics {
+		fmt.Println(topic)
+	}
+
+	return nil
+}
+
+func getTopics(batchSize int) ([]string, error) {
+	starredRepos, err := getRepos(batchSize, true)
+	if err != nil {
+		return nil, err
 	}
 
 	topicExists := map[string]bool{}
@@ -120,36 +132,97 @@ func topics(ctx *cli.Context) error {
 		}
 	}
 
+	topics := []string{}
 	for topic := range topicExists {
-		fmt.Println(topic)
+		topics = append(topics, topic)
 	}
-
-	return nil
+	sort.Slice(topics, func(i, j int) bool { return topics[i] < topics[j] })
+	return topics, nil
 }
 
 func shell(ctx *cli.Context) error {
-	executer := AppExecuter{ctx.App}
-	completer := AppCompleter{ctx.App}
+	executer := AppExecuter{ctx}
+	completer := AppCompleter{ctx}
 	p := prompt.New(executer.execute, completer.complete, prompt.OptionPrefix(fmt.Sprintf("%s> ", COMMAND_NAME)))
 	p.Run()
 	return nil
 }
 
 type AppExecuter struct {
-	app *cli.App
+	ctx *cli.Context
 }
 
 func (e *AppExecuter) execute(in string) {
 	args := []string{COMMAND_NAME}
 	args = append(args, strings.Fields(in)...)
-	e.app.Run(args) //nolint:errcheck
+	e.ctx.App.Run(args) //nolint:errcheck
 }
 
 type AppCompleter struct {
-	app *cli.App
+	ctx *cli.Context
 }
 
 func (c *AppCompleter) complete(in prompt.Document) []prompt.Suggest {
+	lineBeforeCursor := in.CurrentLineBeforeCursor()
+
+	// At first word, complete by commands
+	if !strings.Contains(strings.TrimLeft(lineBeforeCursor, " "), " ") {
+		s := []prompt.Suggest{}
+		for _, cmd := range c.ctx.App.Commands {
+			s = append(s, prompt.Suggest{
+				Text:        cmd.Name,
+				Description: cmd.Usage,
+			})
+		}
+		return prompt.FilterFuzzy(s, in.GetWordBeforeCursor(), true)
+	}
+
+	words := strings.Fields(lineBeforeCursor[:in.FindStartOfPreviousWord()])
+	lastWord := words[len(words)-1]
+
+	cmdWord := words[0]
+	// NOTE: currently --topic is the only flag to accept subsequent arguments
+	isAtTopic := cmdWord == "repos" && (lastWord == "-t" || lastWord == "--topics")
+
+	// complete by repository topics
+	if isAtTopic {
+		topics, _ := getTopics(c.ctx.Int("batch-size"))
+		s := []prompt.Suggest{}
+		for _, topic := range topics {
+			s = append(s, prompt.Suggest{
+				Text: topic,
+			})
+		}
+		return prompt.FilterFuzzy(s, in.GetWordBeforeCursor(), true)
+	}
+
+	// otherwise, complete by flags
+	var cmd *cli.Command
+	for _, c := range c.ctx.App.Commands {
+		if c.Name == cmdWord {
+			cmd = c
+			break
+		}
+	}
+	if cmd != nil {
+		s := []prompt.Suggest{}
+		for _, f := range cmd.Flags {
+			for _, n := range f.Names() {
+				var flagPrefix string
+				if len(n) == 1 {
+					flagPrefix = "-"
+				} else {
+					flagPrefix = "--"
+				}
+				s = append(s, prompt.Suggest{
+					Text: fmt.Sprintf("%s%s", flagPrefix, n),
+				})
+			}
+		}
+		return prompt.FilterFuzzy(s, in.GetWordBeforeCursor(), true)
+	}
+
+	// do nothing
 	return []prompt.Suggest{}
 }
 
