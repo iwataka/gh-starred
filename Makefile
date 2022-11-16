@@ -5,4 +5,4 @@ lint:
 	golangci-lint run
 
 build:
-	go build -o gh-starred main.go
+	go build
